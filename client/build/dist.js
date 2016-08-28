@@ -1,7 +1,7 @@
 
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 2000 );
-var EARTH_RADIUS = 4;
+var EARTH_RADIUS = 100;
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.getElementById('globe').appendChild(renderer.domElement);
@@ -21,10 +21,10 @@ scene.add(earth);
 earth.rotateY(170 * Math.PI / 180)
 earth.rotateX(-10 * Math.PI / 180)
 
-var geometry = new THREE.BoxGeometry( 0.1, 0.1, 0.1 );
+var geometry = new THREE.BoxGeometry( 10, 1, 1);
 var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 var cube = new THREE.Mesh( geometry, material );
-cube.position.set(0, 3, 2)
+cube.position.set(1, 1, 100)
 scene.add( cube );
 
 // add lighting
@@ -34,7 +34,7 @@ light.position.set(5,3,5);
 scene.add(light);
 
 // camera.position.set(30,0,10);
-camera.position.z = 10;
+camera.position.z = 200;
 //camera.position.set(5,5,10);
 
 
