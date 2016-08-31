@@ -1,0 +1,23 @@
+{
+  "name": "client",
+  "description": "",
+  "main": "gulpfile.js",
+  "authors": [
+    "Joe Meiring <josephmeiring@gmail.com>"
+  ],
+  "license": "ISC",
+  "homepage": "https://github.com/josephmeiring/cambodia",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "d3": "^4.2.2",
+    "jquery": "^3.1.0",
+    "tween.js": "tweenjs#^16.3.5"
+  }
+}
