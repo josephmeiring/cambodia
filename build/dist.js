@@ -57,9 +57,9 @@ earth.rotateY(rot_earth_phi)
 earth.rotateX(rot_earth_theta)
 
 //testing
-// var circ_geom = new THREE.CircleGeometry(0.2, 32);
-// var mat = new THREE.MeshBasicMaterial({color: 0xffff00, opacity: true});
-// mat.side = THREE.DoubleSide;
+var circ_geom = new THREE.CircleGeometry(0.2, 32);
+var circ_mat = new THREE.MeshBasicMaterial({color: 0xffff00, opacity: true});
+circ_mat.side = THREE.DoubleSide;
 // mat.opacity = 0.3;
 // for (var i=0; i<10000; i++) {
 //   var circle = new THREE.Mesh( circ_geom, mat );
@@ -90,7 +90,6 @@ d3.csv('data/positions.csv', function (d) {
   var group_by_date = d3.nest()
     .key(function (d) {return d.datetime_utc.toDateString()})
     .entries(data);
-  console.log(group_by_date)
 
   group_by_date.forEach(function (group, i) {
     var pc_geometry = new THREE.Geometry();
@@ -98,9 +97,9 @@ d3.csv('data/positions.csv', function (d) {
       {size: 0.2, color:0xff0000, transparent:true, opacity:0.8}
     );
     var particles = new THREE.Points( pc_geometry, pc_material);
-    // particles.scale.x = 5.0;
-    // particles.scale.y = 5.0;
-    // particles.scale.z = 5.0;
+      
+    var vertical_marker_group = new THREE.Object3D();
+
 
     setTimeout( function () {
       group.values.forEach(function (d) {
@@ -114,14 +113,6 @@ d3.csv('data/positions.csv', function (d) {
   })
 
 })
-
-for (var i=0; i<100; i++) {
-  setTimeout(function () {console.log("hello")}, 1000)
-}
-
-
-// camera.lookAt(new THREE.Vector3(0, 0, 3000))
-
 
 var render = function () {
     requestAnimationFrame(render);
