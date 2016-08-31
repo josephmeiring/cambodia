@@ -1,7 +1,7 @@
 "use strict";
 
 /* 
-globals window,THREE 
+globals window,THREE, d3
 */
 
 
@@ -53,13 +53,13 @@ camera.position.z = EARTH_RADIUS * 1.1;
 // rotate above SE asia
 var rot_earth_phi = 165 * Math.PI / 180,
     rot_earth_theta = -12 * Math.PI / 180;
-earth.rotateY(rot_earth_phi)
-earth.rotateX(rot_earth_theta)
+earth.rotateY(rot_earth_phi);
+earth.rotateX(rot_earth_theta);
 
 //testing
-// var circ_geom = new THREE.CircleGeometry(0.2, 32);
-// var mat = new THREE.MeshBasicMaterial({color: 0xffff00, opacity: true});
-// mat.side = THREE.DoubleSide;
+var circ_geom = new THREE.CircleGeometry(1, 32);
+var circ_mat = new THREE.MeshBasicMaterial({color: 0xffff00, opacity: true});
+circ_mat.side = THREE.DoubleSide;
 // mat.opacity = 0.3;
 // for (var i=0; i<10000; i++) {
 //   var circle = new THREE.Mesh( circ_geom, mat );
@@ -98,19 +98,38 @@ d3.csv('data/positions.csv', function (d) {
       {size: 0.2, color:0xff0000, transparent:true, opacity:0.8}
     );
     var particles = new THREE.Points( pc_geometry, pc_material);
+
+    var vertical_line_group = new THREE.Object3D();
+    var vetical_marker_geometry = new THREE.BoxGeometry(0.5, 0.5, 10)
+    var vertical_marker_material = new THREE.MeshBasicMaterial({color: 0xfffff, wireframe: true});
+    // console.log(vetical_marker_geometry)
+    var large_marker_group = new THREE.Object3D();
     // particles.scale.x = 5.0;
     // particles.scale.y = 5.0;
     // particles.scale.z = 5.0;
+
 
     setTimeout( function () {
       group.values.forEach(function (d) {
           var vec = latlon2vector(d.lat, d.lon, EARTH_RADIUS, 0)
           pc_geometry.vertices.push(vec);
+          var cube = new THREE.Mesh(vetical_marker_geometry, vertical_marker_material);
+          cube.position.set(vec.x, vec.y, vec.z)
+          vertical_line_group.add(cube)
+          var circle = new THREE.Mesh( circ_geom, circ_mat );
+          circle.position.set(vec.x, vec.y, vec.z);
+          large_marker_group.add(circle)
       })
-      // console.log(group)
       earth.add(particles)
+      earth.add(vertical_line_group)
+      earth.add(large_marker_group)
 
-    },10 * i)
+    },50 * i)
+
+    setTimeout(function () {
+      earth.remove(vertical_line_group);
+      earth.remove(large_marker_group);
+    }, 50*(i+1));
   })
 
 })
