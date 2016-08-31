@@ -22,7 +22,7 @@ controls.minDistance = EARTH_RADIUS * 1.1;
 controls.maxDistance = EARTH_RADIUS * 2;
 
 // controls.update();
-controls.addEventListener( 'change', render );
+// controls.addEventListener( 'change', render );
 
 
 var geometry = new THREE.SphereGeometry(EARTH_RADIUS, 50, 50);
@@ -42,7 +42,7 @@ scene.add(new THREE.AmbientLight(0xffffff));
 // scene.add(light);
 
 // camera.position.set(30,0,10);
-camera.position.z = EARTH_RADIUS * 1.1;
+camera.position.z = EARTH_RADIUS * 1.5;
 // camera.position.y = EARTH_RADIUS * 2;
 // camera.position.x = EARTH_RADIUS * 2;
 // camera.up.set( 0, 1, 0 );
@@ -56,21 +56,18 @@ var rot_earth_phi = 165 * Math.PI / 180,
 earth.rotateY(rot_earth_phi)
 earth.rotateX(rot_earth_theta)
 
-//testing
-var circ_geom = new THREE.CircleGeometry(0.2, 32);
+
+
+
+
+var circ_geom = new THREE.CircleGeometry(1.0, 32);
 var circ_mat = new THREE.MeshBasicMaterial({color: 0xffff00, opacity: true});
 circ_mat.side = THREE.DoubleSide;
-// mat.opacity = 0.3;
-// for (var i=0; i<10000; i++) {
-//   var circle = new THREE.Mesh( circ_geom, mat );
-//   var coords = random_lat_lon()
-//   var vec = latlon2vector(coords[1], coords[0], EARTH_RADIUS, 0)
 
-//   circle.position.set(vec.x, vec.y, vec.z);
-//   // circle.rotation.x = rot_earth_theta;
-//   // circle.rotation.y = rot_earth_phi;
-//   earth.add(circle)
-// }
+
+var vertical_marker_geom = new THREE.CubeGeometry(1, 1, 10);
+var vertical_marker_mesh = new THREE.MeshBasicMaterial({color: 0xb7f4f7, opacity: true});
+
 
 d3.csv('data/positions.csv', function (d) {
   return {
@@ -94,22 +91,37 @@ d3.csv('data/positions.csv', function (d) {
   group_by_date.forEach(function (group, i) {
     var pc_geometry = new THREE.Geometry();
     var pc_material = new THREE.PointsMaterial(
-      {size: 0.2, color:0xff0000, transparent:true, opacity:0.8}
+      {size: 0.3, color:0xff0000, transparent:true, opacity:0.8}
     );
     var particles = new THREE.Points( pc_geometry, pc_material);
       
     var vertical_marker_group = new THREE.Object3D();
+    var circle_marker_group = new THREE.Object3D();
 
 
     setTimeout( function () {
       group.values.forEach(function (d) {
           var vec = latlon2vector(d.lat, d.lon, EARTH_RADIUS, 0)
           pc_geometry.vertices.push(vec);
+          var vm = new THREE.Mesh( vertical_marker_geom, vertical_marker_mesh );
+          vm.position.set(vec.x, vec.y, vec.z - 5)
+          vertical_marker_group.add(vm);
+
+          var cm = new THREE.Mesh(circ_geom, circ_mat);
+          cm.position.set(vec.x, vec.y, vec.z)
+          circle_marker_group.add(cm)
       })
       // console.log(group)
       earth.add(particles)
+      earth.add(vertical_marker_group)
+      earth.add(circle_marker_group)
 
-    },10 * i)
+    },20 * i)
+
+    setTimeout( function () {
+      earth.remove(vertical_marker_group);
+      earth.remove(circle_marker_group);
+    }, 20* (i+1))
   })
 
 })
