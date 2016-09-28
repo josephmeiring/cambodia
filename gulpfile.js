@@ -5,6 +5,9 @@ var clean = require('gulp-clean');
 // var livereload = require('gulp-livereload');
 var debug = require('gulp-debug');
 var connect = require('gulp-connect');
+var browserify = require('browserify');
+var transform = require('vinyl-transform');
+var source = require('vinyl-source-stream');
 
 var paths = {
   js: ['./js/**/*.js'],
@@ -20,6 +23,7 @@ gulp.task('connect', function() {
   });
 });
 
+
 gulp.task('clean', function (done) {
   gutil.log("cleaning");
   return gulp.src('./build')
@@ -27,18 +31,20 @@ gulp.task('clean', function (done) {
 });
 
 gulp.task('build', ['clean'], function(cb) {
-
+  
   gulp.src(paths.css)
     .pipe(concat('dist.css'))
     .pipe(gulp.dest('./build'));
 
-  gulp.src(paths.js)
-    .pipe(debug())
-    .pipe(concat('dist.js'))
-    .pipe(gulp.dest('./build/'))
-    .pipe(connect.reload());
+  browserify({
+    entries: 'js/index.js',
+    debug: true
+  })
+  .bundle()
+  .pipe(source('dist.js'))
+  .pipe(gulp.dest('./build/'))
+  .pipe(connect.reload());
 
-  cb(null);
 });
  
 gulp.task('watch', function() {
