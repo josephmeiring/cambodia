@@ -4,31 +4,32 @@ var concat = require('gulp-concat');
 var clean = require('gulp-clean');
 // var livereload = require('gulp-livereload');
 var debug = require('gulp-debug');
-var connect = require('gulp-connect');
+var livereload = require('gulp-livereload');
 var browserify = require('browserify');
 var transform = require('vinyl-transform');
 var source = require('vinyl-source-stream');
+var server = require('gulp-server-livereload');
+
 
 var paths = {
   js: ['./js/**/*.js'],
   css: ['./css/**/*.css'],
 };
 
-gulp.task('default', ['build']);
-
-gulp.task('connect', function() {
-  connect.server({
-    // root: 'app',
-    livereload: true
-  });
+gulp.task('webserver', function() {
+  gulp.src('./')
+    .pipe(server({
+      livereload: false,
+    }));
 });
-
 
 gulp.task('clean', function (done) {
   gutil.log("cleaning");
-  return gulp.src('./build')
+  return gulp.src('./build/')
            .pipe(clean({force: true}));
 });
+
+
 
 gulp.task('build', ['clean'], function(cb) {
   
@@ -36,20 +37,21 @@ gulp.task('build', ['clean'], function(cb) {
     .pipe(concat('dist.css'))
     .pipe(gulp.dest('./build'));
 
-  browserify({
+  return browserify({
     entries: 'js/index.js',
     debug: true
   })
   .bundle()
   .pipe(source('dist.js'))
   .pipe(gulp.dest('./build/'))
-  .pipe(connect.reload());
-
+  .pipe(livereload());
+  
 });
  
 gulp.task('watch', function() {
-  gulp.watch([paths.js, paths.css], ['clean', 'build']);
+  livereload.listen();
+  gulp.watch([paths.js, paths.css], ['build']);
 });
 
-gulp.task('default', ['connect', 'watch']);
+gulp.task('default', ['watch', 'webserver']);
 

@@ -13,6 +13,7 @@
     "gulp-livereload": "^3.8.1"
   },
   "devDependencies": {
+    "gulp-server-livereload": "^1.8.4",
     "vinyl-source-stream": "^1.1.0",
     "vinyl-transform": "^1.0.0"
   },

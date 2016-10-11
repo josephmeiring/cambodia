@@ -1,4 +1,4 @@
 // var THREE = require('../components/three.js/build/three.js');
-var globe_view = require('./globe.js');
+var mesh_view = require('./mesh.js');
 
-globe_view();
+mesh_view();

@@ -1,72 +1,122 @@
 
-var THREE = require('../components/three.js/build/three.js');
+// var THREE = require('../components/three.js/build/three.js');
+// var geotiff = require('../components/geotiff/src/geotiff.js');
+var utils = require('./utils.js');
+module.exports = mesh_view;
 
 function mesh_view () {
   'use strict';
 
   var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 2000 );
-  var EARTH_RADIUS = 1000;
+  var camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+  scene.add(camera);
+
+  var light = new THREE.DirectionalLight( 0xffffff, 1.5 );
+  var light2 = new THREE.AmbientLight( 0xffffff, 0.5);
+  light.position.set( 1, 1, 3 ).normalize();
+  scene.add(light);
   var renderer = new THREE.WebGLRenderer({antialias: true});
   renderer.setSize( window.innerWidth/2, window.innerHeight/2 );
   document.getElementById('globe').appendChild(renderer.domElement);
-
+  
 
   var controls = new THREE.OrbitControls( camera );
   controls.enableDamping = true;
   controls.dampingFactor = 0.5;
-  controls.zoomSpeed = 0.15;
-  controls.rotateSpeed = 0.25;
-  controls.minDistance = EARTH_RADIUS * 1.1;
-  controls.maxDistance = EARTH_RADIUS * 2;
+  controls.zoomSpeed = 1;
+  controls.rotateSpeed = 1;
+  controls.minDistance = 10 * 1.1;
+  controls.maxDistance = 1000 * 2;
 
   // controls.update();
   // controls.addEventListener( 'change', render );
+  // var material  = new THREE.MeshPhongMaterial();
 
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/images/test.tif', true);
+  xhr.responseType = 'arraybuffer';
+  xhr.onerror = function (e) {
+    console.log(e)
+  };
+  xhr.onload = function(e) {
+    var tiff = GeoTIFF.parse(this.response);
+    console.log(tiff.getImage().getWidth());
+    var terrain = utils.geotiff2array(tiff);
+    console.log(terrain)
 
-  var geometry = new THREE.SphereGeometry(EARTH_RADIUS, 50, 50);
-  var material  = new THREE.MeshPhongMaterial();
-  material.map    = THREE.ImageUtils.loadTexture('images/3_no_ice_clouds_8k.jpg');
-  material.specularMap    = THREE.ImageUtils.loadTexture('images/elev_bump_4k.jpg');
+    var geom = new THREE.Geometry();
+    var width = terrain[0].length - 1;
+    var height = terrain.length - 1;
+    var w = 3;
+    var counter = 0;
+    for(var i = 0; i < width; i++){
+      for(var j = 0; j < height; j++){
+      var faceIndexBace = counter * 6;
+      var y = [
+        terrain[j  ][i  ] * w / 3,
+        terrain[j  ][i+1] * w / 3,
+        terrain[j+1][i  ] * w / 3,
+        terrain[j+1][i+1] * w / 3
+      ];
+      //square : triangle1 + triangle2
+        // triangle1
+        (function(){
+          var v1 = new THREE.Vector3(      i * w, y[0],        (-1 * j) * w);
+          var v2 = new THREE.Vector3((1 + i) * w, y[1],        (-1 * j) * w);
+          var v3 = new THREE.Vector3(      i * w, y[2], (-1 + (-1 * j)) * w);
+          if (counter % 100) console.log(v1, v2, v3)
+          geom.vertices.push(v1);
+          geom.vertices.push(v2);
+          geom.vertices.push(v3);
+          
+          var face = new THREE.Face3( faceIndexBace , faceIndexBace + 1, faceIndexBace + 2 );
+          face.normal = (function (){
+            var vx = (v1.y - v3.y) * (v2.z - v3.z) - (v1.z - v3.z) * (v2.y - v3.y);
+            var vy = (v1.z - v3.z) * (v2.x - v3.x) - (v1.x - v3.x) * (v2.z - v3.z);
+            var vz = (v1.x - v3.x) * (v2.y - v3.y) - (v1.y - v3.y) * (v2.x - v3.x);
+            var va = Math.sqrt( Math.pow(vx,2) +Math.pow(vy,2)+Math.pow(vz,2));
+            return new THREE.Vector3( vx/va, vy/va, vz/va);
+          })();
+          geom.faces.push( face );
+        })();
+        
+        // triangle2
+        (function(){
+          var v1 = new THREE.Vector3( (1 + i) * w, y[1],        (-1 * j) * w);
+          var v2 = new THREE.Vector3( (1 + i) * w, y[3], (-1 + (-1 * j)) * w);
+          var v3 = new THREE.Vector3(       i * w, y[2], (-1 + (-1 * j)) * w);
+          geom.vertices.push(v1);
+          geom.vertices.push(v2);
+          geom.vertices.push(v3);
+          
+          var face = new THREE.Face3( faceIndexBace + 3, faceIndexBace + 4, faceIndexBace + 5 );
+          face.normal = (function (){
+            var vx = (v1.y - v3.y) * (v2.z - v3.z) - (v1.z - v3.z) * (v2.y - v3.y);
+            var vy = (v1.z - v3.z) * (v2.x - v3.x) - (v1.x - v3.x) * (v2.z - v3.z);
+            var vz = (v1.x - v3.x) * (v2.y - v3.y) - (v1.y - v3.y) * (v2.x - v3.x);
+            var va = Math.sqrt( Math.pow(vx,2) +Math.pow(vy,2)+Math.pow(vz,2));
+            return new THREE.Vector3( vx/va, vy/va, vz/va);
+          })();
+          geom.faces.push( face );
+        })();
+        
+        
+        counter++;
+      }
+    }
+  
+    var mesh= new THREE.Mesh(
+      geom,
+      //new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.SmoothShading } )
+      new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } )
+    );
+    mesh.position.x = -1 * width / 2 * w;
+    mesh.position.z = height / 2  * w;
+    scene.add(mesh);
 
-  var earth = new THREE.Mesh(geometry, material);
-  scene.add(earth);
-
-  var axisHelper = new THREE.AxisHelper( 100 );
-  scene.add( axisHelper );
-  // add lighting
-  scene.add(new THREE.AmbientLight(0xffffff));
-  // var light = new THREE.DirectionalLight(0xffffff, 1);
-  // light.position.set(0,3,5);
-  // scene.add(light);
-
-  // camera.position.set(30,0,10);
-  camera.position.z = EARTH_RADIUS * 1.5;
-  // camera.position.y = EARTH_RADIUS * 2;
-  // camera.position.x = EARTH_RADIUS * 2;
-  // camera.up.set( 0, 1, 0 );
-  //camera.position.set(5,5,10);
-  // camera.rotateX(-10 * Math.PI / 180)
-  // camera.rotateY(170 * Math.PI / 180)
-
-  // rotate above SE asia
-  var rot_earth_phi = 165 * Math.PI / 180,
-      rot_earth_theta = -12 * Math.PI / 180;
-  earth.rotateY(rot_earth_phi);
-  earth.rotateX(rot_earth_theta);
-
-
-
-
-
-  var circ_geom = new THREE.CircleGeometry(1.0, 32);
-  var circ_mat = new THREE.MeshBasicMaterial({color: 0xffff00, opacity: true});
-  circ_mat.side = THREE.DoubleSide;
-
-
-  var vertical_marker_geom = new THREE.CubeGeometry(1, 1, 10);
-  var vertical_marker_mesh = new THREE.MeshBasicMaterial({color: 0xb7f4f7, opacity: true});
-
+  };
+  xhr.send();
+  // console.log(material) 
 
   // d3.csv('data/positions.csv', function (d) {
   //   return {
