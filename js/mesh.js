@@ -6,116 +6,91 @@ module.exports = mesh_view;
 
 function mesh_view () {
   'use strict';
-
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+  // SCENE
+  var scene, camera, renderer, 
+      container, controls, 
+      customUniforms;
+  scene = new THREE.Scene();
+  // CAMERA
+  var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+  var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
+  camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
   scene.add(camera);
-
-  var light = new THREE.DirectionalLight( 0xffffff, 1.5 );
-  var light2 = new THREE.AmbientLight( 0xffffff, 0.5);
-  light.position.set( 1, 1, 3 ).normalize();
+  camera.position.set(0,1000,1000);
+  camera.lookAt(scene.position);  
+  // RENDERER
+  
+  renderer = new THREE.WebGLRenderer( {antialias:true} );
+ 
+  renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+  container = document.getElementById( 'map' );
+  container.appendChild( renderer.domElement );
+  // EVENTS
+  // THREEx.WindowResize(renderer, camera);
+  // THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+  // CONTROLS
+  controls = new THREE.OrbitControls( camera, renderer.domElement );
+  
+  // LIGHT
+  var light = new THREE.AmbientLight(0xffffff);
+  light.position.set(0,1000,0);
   scene.add(light);
-  var renderer = new THREE.WebGLRenderer({antialias: true});
-  renderer.setSize( window.innerWidth/2, window.innerHeight/2 );
-  document.getElementById('globe').appendChild(renderer.domElement);
   
-
-  var controls = new THREE.OrbitControls( camera );
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.5;
-  controls.zoomSpeed = 1;
-  controls.rotateSpeed = 1;
-  controls.minDistance = 10 * 1.1;
-  controls.maxDistance = 1000 * 2;
-
-  // controls.update();
-  // controls.addEventListener( 'change', render );
-  // var material  = new THREE.MeshPhongMaterial();
-
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/images/test.tif', true);
-  xhr.responseType = 'arraybuffer';
-  xhr.onerror = function (e) {
-    console.log(e)
-  };
-  xhr.onload = function(e) {
-    var tiff = GeoTIFF.parse(this.response);
-    console.log(tiff.getImage().getWidth());
-    var terrain = utils.geotiff2array(tiff);
-    console.log(terrain)
-
-    var geom = new THREE.Geometry();
-    var width = terrain[0].length - 1;
-    var height = terrain.length - 1;
-    var w = 3;
-    var counter = 0;
-    for(var i = 0; i < width; i++){
-      for(var j = 0; j < height; j++){
-      var faceIndexBace = counter * 6;
-      var y = [
-        terrain[j  ][i  ] * w / 3,
-        terrain[j  ][i+1] * w / 3,
-        terrain[j+1][i  ] * w / 3,
-        terrain[j+1][i+1] * w / 3
-      ];
-      //square : triangle1 + triangle2
-        // triangle1
-        (function(){
-          var v1 = new THREE.Vector3(      i * w, y[0],        (-1 * j) * w);
-          var v2 = new THREE.Vector3((1 + i) * w, y[1],        (-1 * j) * w);
-          var v3 = new THREE.Vector3(      i * w, y[2], (-1 + (-1 * j)) * w);
-          if (counter % 100) console.log(v1, v2, v3)
-          geom.vertices.push(v1);
-          geom.vertices.push(v2);
-          geom.vertices.push(v3);
-          
-          var face = new THREE.Face3( faceIndexBace , faceIndexBace + 1, faceIndexBace + 2 );
-          face.normal = (function (){
-            var vx = (v1.y - v3.y) * (v2.z - v3.z) - (v1.z - v3.z) * (v2.y - v3.y);
-            var vy = (v1.z - v3.z) * (v2.x - v3.x) - (v1.x - v3.x) * (v2.z - v3.z);
-            var vz = (v1.x - v3.x) * (v2.y - v3.y) - (v1.y - v3.y) * (v2.x - v3.x);
-            var va = Math.sqrt( Math.pow(vx,2) +Math.pow(vy,2)+Math.pow(vz,2));
-            return new THREE.Vector3( vx/va, vy/va, vz/va);
-          })();
-          geom.faces.push( face );
-        })();
-        
-        // triangle2
-        (function(){
-          var v1 = new THREE.Vector3( (1 + i) * w, y[1],        (-1 * j) * w);
-          var v2 = new THREE.Vector3( (1 + i) * w, y[3], (-1 + (-1 * j)) * w);
-          var v3 = new THREE.Vector3(       i * w, y[2], (-1 + (-1 * j)) * w);
-          geom.vertices.push(v1);
-          geom.vertices.push(v2);
-          geom.vertices.push(v3);
-          
-          var face = new THREE.Face3( faceIndexBace + 3, faceIndexBace + 4, faceIndexBace + 5 );
-          face.normal = (function (){
-            var vx = (v1.y - v3.y) * (v2.z - v3.z) - (v1.z - v3.z) * (v2.y - v3.y);
-            var vy = (v1.z - v3.z) * (v2.x - v3.x) - (v1.x - v3.x) * (v2.z - v3.z);
-            var vz = (v1.x - v3.x) * (v2.y - v3.y) - (v1.y - v3.y) * (v2.x - v3.x);
-            var va = Math.sqrt( Math.pow(vx,2) +Math.pow(vy,2)+Math.pow(vz,2));
-            return new THREE.Vector3( vx/va, vy/va, vz/va);
-          })();
-          geom.faces.push( face );
-        })();
-        
-        
-        counter++;
-      }
-    }
+   // // LIGHT
+  // var light2 = new THREE.PointLight(0xffffff);
+  // light2.position.set(1000,1000,1000);
+  // scene.add(light2);
+  // FLOOR
+  // var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+  // floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+  // floorTexture.repeat.set( 10, 10 );
+  // var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+  // var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+  // var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  // floor.position.y = -0.5;
+  // floor.rotation.x = Math.PI / 2;
+  // scene.add(floor);
+  // SKYBOX
+  var skyBoxGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+  var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
+  var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
+  scene.add(skyBox);
   
-    var mesh= new THREE.Mesh(
-      geom,
-      //new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.SmoothShading } )
-      new THREE.MeshLambertMaterial( { color: 0xCCCCCC, shading: THREE.FlatShading } )
-    );
-    mesh.position.x = -1 * width / 2 * w;
-    mesh.position.z = height / 2  * w;
-    scene.add(mesh);
-
-  };
-  xhr.send();
+  ////////////
+  // CUSTOM //
+  ////////////
+  
+  // texture used to generate "bumpiness"
+  var loader = new THREE.TextureLoader();
+  loader.load('images/cambodia_heightmap.png', function (bumpTexture) {
+    console.log(bumpTexture)
+    bumpTexture.minFilter = THREE.NearestFilter;
+    // bumpTexture.wrapS = bumpTexture.wrapT = THREE.RepeatWrapping; 
+    // magnitude of normal displacement
+    var bumpScale   = 50.0;
+    
+    // use "this." to create global object
+    customUniforms = {
+      bumpTexture:  { type: "t", value: bumpTexture },
+      bumpScale:      { type: "f", value: bumpScale },
+    };
+    
+    // create custom material from the shader code above
+    //   that is within specially labelled script tags
+    var customMaterial = new THREE.ShaderMaterial( 
+    {
+        uniforms: customUniforms,
+      vertexShader:   document.getElementById( 'vertexShader'   ).textContent,
+      fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+      side: THREE.DoubleSide
+    }   );
+      
+    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 500, 500 );
+    var plane = new THREE.Mesh( planeGeo, customMaterial );
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = 0;
+    scene.add( plane );
+  })
   // console.log(material) 
 
   // d3.csv('data/positions.csv', function (d) {

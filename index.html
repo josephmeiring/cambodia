@@ -11,15 +11,43 @@
     <script src="components/OrbitControls.js"></script>
     <script src="components/jquery/dist/jquery.min.js"></script>
     <script src="components/d3/d3.min.js"></script>
-    <script src="components/geotiff/dist/geotiff.js"></script>
   </head>
   <body>
 
-    <div  id="globe"> 
-      <div id="animation_date">
-        
-      </div>
+    <div  id="map"> 
+      
     </div>
+    <!--  Custom Shader Code -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+      uniform sampler2D bumpTexture;
+      uniform float bumpScale;
+
+      varying float vAmount;
+
+      void main() 
+      { 
+        vec4 bumpData = texture2D( bumpTexture, uv );
+        
+        vAmount = bumpData.r; // assuming map is grayscale it doesn't matter if you use r, g, or b.
+        
+        // move the position along the normal
+        vec3 newPosition = position + normal * bumpScale * vAmount;
+        
+        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
+      }
+    </script>
+
+    <!-- fragment shader a.k.a. pixel shader -->
+    <script id="fragmentShader" type="x-shader/x-vertex"> 
+
+      varying float vAmount;
+
+      void main() 
+      {
+        gl_FragColor = vec4(0.0, vAmount, 0.0, 1.0);
+      }  
+    </script>
+
     <script type="text/javascript" src="build/dist.js"></script>
   </body>
 </html>
