@@ -14,7 +14,7 @@
   </head>
   <body>
 
-    <div  id="map"> 
+    <div  id="map" style="width:100%"> 
       
     </div>
     <!--  Custom Shader Code -->
@@ -44,7 +44,13 @@
 
       void main() 
       {
-        gl_FragColor = vec4(0.0, vAmount, 0.0, 1.0);
+        // gl_FragColor = vec4(0.0, vAmount, 0.0, 1.0);
+        vec3 water = (smoothstep(0.0, 0.02, vAmount) - smoothstep(0.01, 0.03, vAmount)) * vec3(0.9, 0.9, 0.5);
+        vec3 sandy = (smoothstep(0.02, 0.27, vAmount) - smoothstep(0.26, 1.1, vAmount))  * vec3(0.0, 0.9, 0.1);
+        // vec3 grass = (smoothstep(0.28, 0.32, vAmount) - smoothstep(0.35, 0.40, vAmount))  * vec3(0.0, 0.6, 0.0);
+        // vec3 rocky = (smoothstep(0.30, 0.50, vAmount) - smoothstep(0.40, 0.7, vAmount))   * vec3(0.8, 0.4, 0.2);
+        // vec3 snowy = (smoothstep(0.50, 0.65, vAmount))                                    * vec3(0.8, 0.8, 0.8);
+        gl_FragColor = vec4(water + sandy, 1.0);
       }  
     </script>
 

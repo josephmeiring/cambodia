@@ -9,7 +9,18 @@ function mesh_view () {
   // SCENE
   var scene, camera, renderer, 
       container, controls, 
-      customUniforms;
+      customUniforms, grid, raycaster, 
+      mouse = new THREE.Vector2();
+
+  function onDocumentMouseMove( event ) {
+    event.preventDefault();
+    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+  }
+  document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+
+  raycaster = new THREE.Raycaster();
   scene = new THREE.Scene();
   // CAMERA
   var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
@@ -63,11 +74,16 @@ function mesh_view () {
   // texture used to generate "bumpiness"
   var loader = new THREE.TextureLoader();
   loader.load('images/cambodia_heightmap.png', function (bumpTexture) {
-    console.log(bumpTexture)
-    bumpTexture.minFilter = THREE.NearestFilter;
+
+    // the extents are hard coded from the geoTIFF header info. Probably could load the geoTiff itself
+    // to be more robust, but this is one-off. 
+    grid = new utils.grid2d(bumpTexture.image.width, bumpTexture.image.height, 
+                [14.9082, 100.95], [10.01653529, 108.64166]);
+    console.log(grid.latlon2xy(11.5449, 104.8922));
+    bumpTexture.minFilter = THREE.LinearFilter;
     // bumpTexture.wrapS = bumpTexture.wrapT = THREE.RepeatWrapping; 
     // magnitude of normal displacement
-    var bumpScale   = 50.0;
+    var bumpScale   = 60.0;
     
     // use "this." to create global object
     customUniforms = {
@@ -84,13 +100,23 @@ function mesh_view () {
       fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
       side: THREE.DoubleSide
     }   );
-      
-    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 500, 500 );
+    
+    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 400, 300 );
     var plane = new THREE.Mesh( planeGeo, customMaterial );
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = 0;
     scene.add( plane );
-  })
+    
+
+    var cube = new THREE.Mesh( new THREE.CubeGeometry( 20, 20, 20 ), new THREE.MeshNormalMaterial() );
+    cube.position.x = 640;
+    cube.position.y = 0;
+    cube.position.z = 480;
+    scene.add(cube);
+    raycaster.setFromCamera(cube, camera );
+    var intersects = raycaster.intersectObject(plane);
+    console.log(raycaster, intersects);
+  });
   // console.log(material) 
 
   // d3.csv('data/positions.csv', function (d) {
