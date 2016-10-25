@@ -10,6 +10,7 @@ function mesh_view () {
   var scene, camera, renderer, 
       container, controls, 
       customUniforms, grid, raycaster, 
+      map_width, map_height,
       mouse = new THREE.Vector2();
 
   function onDocumentMouseMove( event ) {
@@ -62,11 +63,12 @@ function mesh_view () {
   // floor.rotation.x = Math.PI / 2;
   // scene.add(floor);
   // SKYBOX
-  var skyBoxGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
-  var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
-  var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
-  scene.add(skyBox);
-  
+  // var skyBoxGeometry = new THREE.CubeGeometry( 10000, 10000, 10000 );
+  // var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
+  // var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
+  // scene.add(skyBox);
+  var axisHelper = new THREE.AxisHelper( 5 );
+  scene.add( axisHelper );
   ////////////
   // CUSTOM //
   ////////////
@@ -74,10 +76,11 @@ function mesh_view () {
   // texture used to generate "bumpiness"
   var loader = new THREE.TextureLoader();
   loader.load('images/cambodia_heightmap.png', function (bumpTexture) {
-
+    map_width = bumpTexture.image.width;
+    map_height = bumpTexture.image.height;
     // the extents are hard coded from the geoTIFF header info. Probably could load the geoTiff itself
     // to be more robust, but this is one-off. 
-    grid = new utils.grid2d(bumpTexture.image.width, bumpTexture.image.height, 
+    grid = new utils.grid2d(map_width, map_height, 
                 [14.9082, 100.95], [10.01653529, 108.64166]);
     console.log(grid.latlon2xy(11.5449, 104.8922));
     bumpTexture.minFilter = THREE.LinearFilter;
@@ -95,27 +98,32 @@ function mesh_view () {
     //   that is within specially labelled script tags
     var customMaterial = new THREE.ShaderMaterial( 
     {
-        uniforms: customUniforms,
+      uniforms: customUniforms,
       vertexShader:   document.getElementById( 'vertexShader'   ).textContent,
       fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
       side: THREE.DoubleSide
-    }   );
+    });
     
-    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 400, 300 );
+    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 600, 400 );
     var plane = new THREE.Mesh( planeGeo, customMaterial );
+    console.log(plane.geometry.vertices)
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = 0;
+    plane.position.x = 0;
     scene.add( plane );
     
+    console.log(map_width/2, map_height/2)
 
     var cube = new THREE.Mesh( new THREE.CubeGeometry( 20, 20, 20 ), new THREE.MeshNormalMaterial() );
-    cube.position.x = 640;
-    cube.position.y = 0;
-    cube.position.z = 480;
+    cube.position.x = 0;
+    cube.position.y = 15;
+    cube.position.z = 0;
+
+    
     scene.add(cube);
-    raycaster.setFromCamera(cube, camera );
-    var intersects = raycaster.intersectObject(plane);
-    console.log(raycaster, intersects);
+    // var ray = new THREE.Ray(new THREE.Vector3(640, 0, 480), new THREE.Vector3(0, 1, 0));
+    // scene.updateMatrixWorld();
+    // console.log(ray.intersectPlane(plane));
   });
   // console.log(material) 
 
