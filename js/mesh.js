@@ -10,7 +10,7 @@ function mesh_view () {
   var scene, camera, renderer, 
       container, controls, 
       customUniforms, grid, raycaster, 
-      map_width, map_height,
+      map_width, map_height, plane,
       mouse = new THREE.Vector2();
 
   function onDocumentMouseMove( event ) {
@@ -67,7 +67,7 @@ function mesh_view () {
   // var skyBoxMaterial = new THREE.MeshBasicMaterial( { color: 0x9999ff, side: THREE.BackSide } );
   // var skyBox = new THREE.Mesh( skyBoxGeometry, skyBoxMaterial );
   // scene.add(skyBox);
-  var axisHelper = new THREE.AxisHelper( 5 );
+  var axisHelper = new THREE.AxisHelper( 20 );
   scene.add( axisHelper );
   ////////////
   // CUSTOM //
@@ -82,7 +82,9 @@ function mesh_view () {
     // to be more robust, but this is one-off. 
     grid = new utils.grid2d(map_width, map_height, 
                 [14.9082, 100.95], [10.01653529, 108.64166]);
-    console.log(grid.latlon2xy(11.5449, 104.8922));
+    grid.set_scene_size(SCREEN_WIDTH, SCREEN_HEIGHT);
+    
+
     bumpTexture.minFilter = THREE.LinearFilter;
     // bumpTexture.wrapS = bumpTexture.wrapT = THREE.RepeatWrapping; 
     // magnitude of normal displacement
@@ -104,29 +106,47 @@ function mesh_view () {
       side: THREE.DoubleSide
     });
     
-    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 600, 400 );
-    var plane = new THREE.Mesh( planeGeo, customMaterial );
-    console.log(plane.geometry.vertices)
+    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 500, 400 );
+    plane = new THREE.Mesh( planeGeo, customMaterial );
+    console.log(plane)
     plane.rotation.x = -Math.PI / 2;
     plane.position.y = 0;
     plane.position.x = 0;
     scene.add( plane );
     
-    console.log(map_width/2, map_height/2)
-
-    var cube = new THREE.Mesh( new THREE.CubeGeometry( 20, 20, 20 ), new THREE.MeshNormalMaterial() );
-    cube.position.x = 0;
-    cube.position.y = 15;
-    cube.position.z = 0;
-
+    add_markers(scene);
     
-    scene.add(cube);
-    // var ray = new THREE.Ray(new THREE.Vector3(640, 0, 480), new THREE.Vector3(0, 1, 0));
-    // scene.updateMatrixWorld();
-    // console.log(ray.intersectPlane(plane));
+    add_marker(11.5449, 104.8922, plane);
   });
+
+  function add_marker(lat, lon, plane) {
+    var scene_pos = grid.latlon2scene(lat, lon);
+    var p1 = new THREE.Vector3(-scene_pos[0], 0, scene_pos[1]);
+    var p2 = new THREE.Vector3(-scene_pos[0], 20000, scene_pos[1]);
+    var arrow = new THREE.ArrowHelper(p2.clone().normalize(), p1, 100, 0xFFFFFF);
+    var direction = new THREE.Vector3 (0, -1, 0);
+    raycaster = new THREE.Raycaster(p1, direction);
+    var myIntersects = raycaster.intersectObject(plane);
+    console.log(myIntersects);
+    scene.add(arrow);
+  }
   // console.log(material) 
 
+  function add_markers() {
+    d3.csv('data/positions.csv', function (d) {
+      return {
+        datetime_utc: new Date(d.datetime_utc),
+        lat: +d.lat,
+        lon: +d.lon
+      };
+    }, function (data) {
+      data = data.slice(0, 100);
+      console.log(data)
+      data.forEach(function (d) {
+        add_marker(d.lat, d.lon, plane);
+      });
+    });
+  }
   // d3.csv('data/positions.csv', function (d) {
   //   return {
   //     datetime_utc: new Date(d.datetime_utc),
