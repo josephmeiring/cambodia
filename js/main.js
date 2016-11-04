@@ -2,6 +2,7 @@
 // var THREE = require('../components/three.js/build/three.js');
 // var geotiff = require('../components/geotiff/src/geotiff.js');
 var utils = require('./utils.js');
+
 module.exports = main_view;
 
 function main_view () {
@@ -10,9 +11,9 @@ function main_view () {
   var scene, camera, renderer, 
       container, controls,
       stats,  
-      customUniforms, grid, raycaster, 
-      map_width, map_height, 
-      terrain;
+      dem,
+      markers,
+      mesh;
 
   scene = new THREE.Scene();
   // CAMERA
@@ -23,14 +24,12 @@ function main_view () {
   camera.position.set(0,2000,1000);
   camera.lookAt(scene.position);  
   
-  // GEO GRID
-
   
 
   // LIGHTS
-  var ambient = new THREE.AmbientLight( 0xffffff );
-  scene.add( ambient );
-  var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+  // var ambient = new THREE.AmbientLight( 0xffffff );
+  // scene.add( ambient );
+  var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.9 );
   directionalLight.position.set( 0, 1000, 1000 );
   scene.add( directionalLight );
   // RENDERER
@@ -49,86 +48,67 @@ function main_view () {
 
   controls = new THREE.OrbitControls( camera, renderer.domElement );
    
-  function getHeightData(img) {
-    var canvas = document.createElement( 'canvas' );
-    canvas.width = img.width;
-    canvas.height = img.height;
-    var context = canvas.getContext( '2d' );
-
-    var size = img.width * img.height, data = new Float32Array( size );
-
-    context.drawImage(img,0,0);
-
-    for ( var i = 0; i < size; i ++ ) {
-      data[i] = 0;
-    }
-
-    var imgd = context.getImageData(0, 0, img.width, img.height);
-    var pix = imgd.data;
-
-    var j=0;
-    for (var i = 0, n = pix.length; i < n; i += 4) {
-      var all = (pix[i] + pix[i+1] + pix[i+2]) / 3;
-      data[j++] = all/6;
-    }
-
-    return data;
-  }
 
   // Load the DEM into a canvas
   var img = new Image();
   img.src = "images/cambodia_heightmap.sm.png";
   img.onload = function () {
-    grid = new utils.grid2d(img.width, img.height, 
+    
+    dem = new utils.DigitalElevationModel(img);
+    dem.set_extents(img.width, img.height, 
                 [14.9082, 100.95], [10.01653529, 108.64166]);
-    grid.set_scene_size(SCREEN_WIDTH, SCREEN_HEIGHT);
-    var data = getHeightData(img);
-    console.log(data.length, img.width, img.height);
+    dem.set_scene_size(SCREEN_WIDTH, SCREEN_HEIGHT);
     var geom = new THREE.PlaneGeometry(SCREEN_WIDTH, SCREEN_HEIGHT, img.width-1, img.height-1 );
     var material = new THREE.MeshPhongMaterial({color: 0x2194ce, side: THREE.DoubleSide});
-    var mesh = new THREE.Mesh(geom, material);
+    mesh = new THREE.Mesh(geom, material);
     mesh.rotation.x = -Math.PI / 2;
-    console.log(geom.vertices.length)
-    for ( var i = 0; i < geom.vertices.length; i++ ) {
-      geom.vertices[i].z = data[i];
+    for ( var i = 0; i < dem.vertices.length; i++ ) {
+      geom.vertices[i].z = dem.vertices[i]/4;
     }
     geom.computeFaceNormals();
     geom.computeVertexNormals();
-    geom.__dirtyNormals = true;
+    // geom.__dirtyNormals = true;
     // var planeMesh = addMesh( plane, 100,  0, FLOOR, 0, -1.57,0,0, getTerrainMaterial() );
     // mesh.visible = true;
     scene.add(mesh);
-    add_marker(11.5449, 108.9, mesh);
+    renderer.render(scene, camera);
+    // var fnh = new THREE.FaceNormalsHelper( mesh, 5 );
+    // scene.add( fnh ); 
+    // add_marker(11.5449, 106.9, mesh);
+    add_marker(11.5449, 104.8922);
+    add_markers();
   };
   
-  function add_marker(lat, lon, mesh) {
-    var scene_pos = grid.latlon2scene(lat, lon);
-    var p1 = new THREE.Vector3(-scene_pos[0], -10, scene_pos[1]);
+  function add_marker(lat, lon) {
+    var scene_pos = dem.latlon2scene(lat, lon);
+    var xy = dem.latlon2xy(lat, lon);
+    var height = dem.data[xy[1]][xy[0]];
+    var p1 = new THREE.Vector3(-scene_pos[0], height/4, scene_pos[1]);
     var p2 = new THREE.Vector3(-scene_pos[0], 20000, scene_pos[1]);
     var arrow = new THREE.ArrowHelper(p2.clone().normalize(), p1, 150, 0xFFFFFF);
-    var direction = new THREE.Vector3 (0, -1, 0);
-    raycaster = new THREE.Raycaster(p1, p2);
-    var intersects = raycaster.intersectObject(mesh);
-    console.log(intersects)
+    // var direction = new THREE.Vector3 (0, 1, 0);
+    // raycaster = new THREE.Raycaster(p1, direction);
+    // var intersects = raycaster.intersectObject(mesh);
+    // console.log(intersects)
     // if (intersects.length > 0) console.log(plane.position.copy(intersects[0].point));
     scene.add(arrow);
   }
   // // console.log(material) 
 
-  // function add_markers() {
-  //   d3.csv('data/tmp.csv', function (d) {
-  //     return {
-  //       datetime_utc: new Date(d.datetime_utc),
-  //       lat: +d.lat,
-  //       lon: +d.lon
-  //     };
-  //   }, function (data) {
-  //     data = data.slice(0, 100);
-  //     data.forEach(function (d) {
-  //       add_marker(d.lat, d.lon, terrain);
-  //     });
-  //   });
-  // }
+  function add_markers(mesh) {
+    d3.csv('data/positions.csv', function (d) {
+      return {
+        datetime_utc: new Date(d.datetime_utc),
+        lat: +d.lat,
+        lon: +d.lon
+      };
+    }, function (data) {
+      data = data.slice(0, 10000);
+      data.forEach(function (d) {
+        add_marker(d.lat, d.lon, mesh);
+      });
+    });
+  }
   // d3.csv('data/positions.csv', function (d) {
   //   return {
   //     datetime_utc: new Date(d.datetime_utc),

@@ -10,8 +10,10 @@ function mesh_view () {
   var scene, camera, renderer, 
       container, controls,
       stats,  
-      customUniforms, grid, raycaster, 
+      grid,
       map_width, map_height, 
+      data_array, 
+      bumpScale = 60.0,
       terrain;
 
   scene = new THREE.Scene();
@@ -40,7 +42,7 @@ function mesh_view () {
    
   var loader = new THREE.TextureLoader();
   loader.load('images/cambodia_heightmap.png', function (bumpTexture) {
-    console.log(bumpTexture)
+    data_array = image2array(bumpTexture.image);
     map_width = bumpTexture.image.width;
     map_height = bumpTexture.image.height;
     // the extents are hard coded from the geoTIFF header info. Probably could load the geoTiff itself
@@ -52,11 +54,9 @@ function mesh_view () {
 
     bumpTexture.minFilter = THREE.LinearFilter;
     // magnitude of normal displacement
-    var bumpScale   = 60.0;
-    
-    customUniforms = {
-      bumpTexture:  { type: "t", value: bumpTexture },
-      bumpScale:      { type: "f", value: bumpScale },
+    var customUniforms = {
+      bumpTexture:  { type: 't', value: bumpTexture },
+      bumpScale:      { type: 'f', value: bumpScale },
     };
     
     // create custom material from the shader code above
@@ -72,37 +72,33 @@ function mesh_view () {
     });
     
     // var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 500, 400 );
-    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 500, 400 );
+    var planeGeo = new THREE.PlaneGeometry( bumpTexture.image.width, bumpTexture.image.height, 300, 200 );
     planeGeo.computeFaceNormals();
     planeGeo.computeVertexNormals();
     planeGeo.computeTangents();
     terrain = new THREE.Mesh( planeGeo, customMaterial );
-
-    // plane.geometry.computeCentroids();
-    // plane.geometry.computeBoundingSphere();
-    // plane.geometry.computeBoundingBox();
-    // console.log(plane.geometry.boundingBox, plane.geometry.boundingSphere)
     terrain.rotation.x = -Math.PI / 2;
-    terrain.position.y = 0;
-    terrain.position.x = 0;
-    console.log(terrain)
     scene.add( terrain );
-    
-    // add_markers(scene);
+    // fnh = new THREE.FaceNormalsHelper( terrain, 50 );
+    // scene.add( fnh );
+
+    renderer.render(scene, camera); 
+    add_markers(scene);
     
     // add_marker(11.5449, 104.8922, plane);
-    add_marker(11.5449, 108.9, terrain);
+    // add_marker(11.5449, 108.9, terrain);
   });
 
   function add_marker(lat, lon, terrain) {
     var scene_pos = grid.latlon2scene(lat, lon);
-    var p1 = new THREE.Vector3(-scene_pos[0], -10, scene_pos[1]);
+    // console.log(scene_pos)
+    
+    var xy = grid.latlon2xy(lat, lon);
+    var height = data_array[xy[1]][xy[0]];
+    console.log(height/bumpScale)
+    var p1 = new THREE.Vector3(-scene_pos[0], height/bumpScale, scene_pos[1]);
     var p2 = new THREE.Vector3(-scene_pos[0], 20000, scene_pos[1]);
     var arrow = new THREE.ArrowHelper(p2.clone().normalize(), p1, 150, 0xFFFFFF);
-    var direction = new THREE.Vector3 (0, -1, 0);
-    raycaster = new THREE.Raycaster(p1, p2);
-    var intersects = raycaster.intersectObject(terrain);
-    console.log(intersects)
     // if (intersects.length > 0) console.log(plane.position.copy(intersects[0].point));
     scene.add(arrow);
   }
@@ -121,6 +117,29 @@ function mesh_view () {
         add_marker(d.lat, d.lon, terrain);
       });
     });
+  }
+
+  function image2array(img) {
+    var canvas = document.createElement( 'canvas' );
+    canvas.width = img.width;
+    canvas.height = img.height;
+    var context = canvas.getContext( '2d' );
+    var data = [];
+    context.drawImage(img,0,0);
+    var imgd = context.getImageData(0, 0, img.width, img.height);
+    var pix = imgd.data;
+  
+    var counter =0;
+    for (var i=0; i<img.height; i++) {
+      var row = new Float32Array(img.width);
+      for (var j=0; j<img.width; j++) {
+        row[j] = pix[counter];
+        counter += 4;
+      }
+      data.push(row);
+    }
+
+    return data; 
   }
   // d3.csv('data/positions.csv', function (d) {
   //   return {
